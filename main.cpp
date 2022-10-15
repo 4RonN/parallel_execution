@@ -25,7 +25,7 @@ int main()
     
     random.resize( 100'000 );
     
-    // 100'000 random numbers => this will gain parallel speedup
+    // 100'000 random numbers => this will gain parallel speedup, but as now, no re-optimization is triggered 
     for ( int i = 0; i < 100; ++i )
         parallel::for_each( random.begin(), random.end(), generate_number );
 

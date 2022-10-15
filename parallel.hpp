@@ -51,7 +51,7 @@ namespace parallel
 {
     using generator = xoroshiro128plus;
         
-    size_t concurrency = std::thread::hardware_concurrency(); 
+    extern size_t concurrency;
     
     bool constexpr runtime_optimization      = true;
     bool constexpr test_runtime_optimization = true;
@@ -61,9 +61,9 @@ namespace parallel
      */
     namespace intern
     {
-        std::vector< std::thread::id > identifier ( 1, std::this_thread::get_id() );
-        std::mutex                     id_mutex = {}; 
-        std::vector< generator >       random     ( concurrency );
+        extern std::vector< std::thread::id > identifier;
+        extern std::mutex                     id_mutex;
+        extern std::vector< generator >       random;
         
         /**
          *  @brief Helper object to measure runtime of parallel function execution for different numbers of threads.
@@ -159,7 +159,7 @@ namespace parallel
     /**
      *  @brief function to access thread index 
      */
-    size_t get_tid()
+    inline size_t get_tid()
     {
         std::lock_guard< std::mutex > lock( intern::id_mutex );
 
@@ -170,7 +170,7 @@ namespace parallel
     /**
      *  @brief function to access the per-thread pseudo random number generator.
      */
-    generator& get_generator() 
+    inline generator& get_generator() 
     {
         thread_local size_t tid = get_tid();
 
@@ -514,14 +514,14 @@ namespace parallel
 
     namespace intern
     {
-        thread_pool global_pool( concurrency - 1 );
+        extern thread_pool global_pool;
     }
     
-    void set_concurrency( size_t concurrency )
+    inline void set_concurrency( size_t new_concurrency )
     {
-        parallel::concurrency = concurrency;
-        intern::global_pool.resize( concurrency - 1 ); 
-        intern::random.resize( concurrency );
+        parallel::concurrency = new_concurrency;
+        intern::global_pool.resize( new_concurrency - 1 ); 
+        intern::random.resize( new_concurrency );
     }
 
     /**
@@ -539,7 +539,7 @@ namespace parallel
         static intern::runtime_optimize this_function; // static variable to store execution statistics
         
         auto   remember    = on_scope_exit( this_function.register_duration() ); // scope guard for runtime logging
-        size_t concurrency = this_function.get_concurrency();
+        size_t local_concurrency = this_function.get_concurrency();
 
         // ------------------------------------------------------------------- //
 
@@ -550,7 +550,7 @@ namespace parallel
         else 
             task = &f; 
 
-        if ( concurrency == 1 )
+        if ( local_concurrency == 1 )
         {
             for ( ; first != last; ++first )
                ( *task )( *first );
@@ -558,13 +558,13 @@ namespace parallel
         }
 
         size_t size       = last - first; 
-        size_t block_size = size / concurrency,
-               remainder  = size % concurrency;
+        size_t block_size = size / local_concurrency,
+               remainder  = size % local_concurrency;
         
         InputIterator block_begin,
                       block_end = first;
 
-        for ( size_t i = 0; i < concurrency; ++i )
+        for ( size_t i = 0; i < local_concurrency; ++i )
         {
             block_begin = block_end; 
             block_end   = block_begin + ( block_size + ( remainder > i ) );
@@ -603,7 +603,7 @@ namespace parallel
         static intern::runtime_optimize this_function; // static variable to store execution statistics
         
         auto   remember    = on_scope_exit( this_function.register_duration() ); // scope guard for runtime logging
-        size_t concurrency = this_function.get_concurrency();
+        size_t local_concurrency = this_function.get_concurrency();
 
         // ------------------------------------------------------------------- //
         
@@ -614,7 +614,7 @@ namespace parallel
         else 
             task = &f; 
 
-        if ( concurrency == 1 or leave_slots >= concurrency )
+        if ( local_concurrency == 1 or leave_slots >= local_concurrency )
         {
             for ( ; first != last; ++first )
                ( *task )( *first ); 
@@ -622,13 +622,13 @@ namespace parallel
         }
 
         size_t size       = last - first; 
-        size_t block_size = size / ( concurrency - leave_slots ),
-               remainder  = size % ( concurrency - leave_slots );
+        size_t block_size = size / ( local_concurrency - leave_slots ),
+               remainder  = size % ( local_concurrency - leave_slots );
 
         InputIterator block_begin,
                       block_end = first;
         
-        for ( size_t i = 0; i < ( concurrency - leave_slots ); ++i )
+        for ( size_t i = 0; i < ( local_concurrency - leave_slots ); ++i )
         {
             block_begin = block_end; 
             block_end   = block_begin + ( block_size + ( remainder > i ) );
@@ -665,7 +665,7 @@ namespace parallel
         static intern::runtime_optimize this_function; // static variable to store execution statistics
         
         auto   remember    = on_scope_exit( this_function.register_duration() ); // scope guard for runtime logging
-        size_t concurrency = this_function.get_concurrency();
+        size_t local_concurrency = this_function.get_concurrency();
 
         // ------------------------------------------------------------------- //
 
@@ -676,7 +676,7 @@ namespace parallel
         else 
             task = &f; 
 
-        if ( concurrency == 1 )
+        if ( local_concurrency == 1 )
         {
             for ( ; first != last; ++first )
                ( *task )( first ); 
@@ -684,13 +684,13 @@ namespace parallel
         }
 
         size_t size       = last - first; 
-        size_t block_size = size / concurrency,
-               remainder  = size % concurrency;
+        size_t block_size = size / local_concurrency,
+               remainder  = size % local_concurrency;
         
         size_t block_begin,
                block_end = first;
         
-        for ( size_t i = 0; i < concurrency; ++i )
+        for ( size_t i = 0; i < local_concurrency; ++i )
         {
             block_begin = block_end; 
             block_end   = block_begin + ( block_size + ( remainder > i ) );
@@ -717,7 +717,7 @@ namespace parallel
     /**
      *  @brief blocks until all work assigned to the global pool is done
      */ 
-    void synchronize() 
+    inline void synchronize() 
     { 
         intern::global_pool.synchronize(); 
     }
