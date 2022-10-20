@@ -16,18 +16,20 @@ int main()
                     element = generator.gaussian();
                 };
 
-    // 100 random numbers => no parallel speedup
-    for ( int i = 0; i < 100; ++i )
+    // for repeated calls, the self-optimization takes place:
+    for ( int i = 0; i < 100; ++i ) 
         parallel::for_each( random.begin(), random.end(), generate_number ); // this call self optimizies the number of threads used
+                                                                             // 100 random numbers => no parallel speedup
 
     for ( size_t i = 0; i < random.size() / 10; ++i )
        std::cout << random[ i ] << std::endl;
     
-    random.resize( 100'000 );
+    random.resize( 100'000 );  
     
-    // 100'000 random numbers => this will gain parallel speedup, but as now, no re-optimization is triggered 
     for ( int i = 0; i < 100; ++i )
         parallel::for_each( random.begin(), random.end(), generate_number );
-
+    
+    // 100'000 random numbers => this will gain parallel speedup, but as now, no re-optimization is triggered
+    
     return 0;
 }
