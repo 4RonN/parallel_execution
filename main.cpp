@@ -16,15 +16,17 @@ int main()
                     element = generator.gaussian();
                 };
 
-    // for repeated calls, the self-optimization takes place:
+    // do 100 calls, to trigger the self-optimization:
     for ( int i = 0; i < 100; ++i ) 
         parallel::for_each( random.begin(), random.end(), generate_number ); // this call self optimizies the number of threads used
                                                                              // 100 random numbers => no parallel speedup
 
-    for ( size_t i = 0; i < random.size() / 10; ++i )
+    for ( size_t i = 0; i < random.size() / 10; ++i ) 
        std::cout << random[ i ] << std::endl;
+   
+    random.resize( 100'000 ); // use more numbers  
     
-    random.resize( 100'000 );  
+    parallel::get_optimizer( generate_number ).reset(); // reset the optimizer for generate number 
     
     for ( int i = 0; i < 100; ++i )
         parallel::for_each( random.begin(), random.end(), generate_number );
